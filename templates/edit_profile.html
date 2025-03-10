@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title text-center mb-4">Editar Perfil</h3>
+                    <form method="post" enctype="multipart/form-data">
+                        <div class="mb-4 text-center">
+                            {% if current_user.profile_pic %}
+                                <img src="{{ url_for('static', filename=current_user.profile_pic) }}" class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;" alt="Foto de perfil actual">
+                            {% else %}
+                                <div class="rounded-circle bg-secondary mb-3 mx-auto" style="width: 150px; height: 150px;">
+                                    <i class="bi bi-person-fill text-white" style="font-size: 4rem; line-height: 150px;"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="profile_pic" class="form-label">Foto de perfil</label>
+                            <input type="file" class="form-control" id="profile_pic" name="profile_pic" accept="image/*">
+                            <div class="form-text">Formatos permitidos: PNG, JPG, JPEG, GIF</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="bio" class="form-label">Biografía</label>
+                            <textarea class="form-control" id="bio" name="bio" rows="4" placeholder="Cuéntanos sobre ti...">{{ current_user.bio }}</textarea>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg"></i> Guardar cambios
+                            </button>
+                            <a href="{{ url_for('profile', username=current_user.username) }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

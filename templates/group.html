@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h2 class="card-title mb-1">{{ group.name }}</h2>
+                            {% if group.description %}
+                                <p class="card-text text-muted">{{ group.description }}</p>
+                            {% endif %}
+                        </div>
+                        {% if current_user in group.members %}
+                            <form action="{{ url_for('leave_group', group_id=group.id) }}" method="post">
+                                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('¿Estás seguro de que quieres dejar este grupo?')">
+                                    <i class="bi bi-box-arrow-right"></i> Salir del grupo
+                                </button>
+                            </form>
+                        {% else %}
+                            <form action="{{ url_for('join_group', group_id=group.id) }}" method="post">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-plus-circle"></i> Unirse al grupo
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex gap-2 text-muted mb-4">
+                        <div>
+                            <i class="bi bi-people-fill"></i> {{ group.members|length }} miembros
+                        </div>
+                        <div>
+                            <i class="bi bi-person-circle"></i> Creado por {{ group.creator.username }}
+                        </div>
+                        <div>
+                            <i class="bi bi-calendar3"></i> {{ group.created_at.strftime('%d/%m/%Y') }}
+                        </div>
+                    </div>
+
+                    {% if current_user in group.members %}
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <form action="{{ url_for('create_group_post', group_id=group.id) }}" method="post" enctype="multipart/form-data">
+                                    <div class="mb-3">
+                                        <textarea class="form-control" name="content" rows="3" placeholder="¿Qué quieres compartir con el grupo?" required></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label d-flex align-items-center gap-2">
+                                            <i class="bi bi-image"></i> Agregar foto
+                                        </label>
+                                        <input type="file" class="form-control" name="image" accept="image/*">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-send-fill"></i> Publicar
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% for post in posts %}
+                        <div class="card post-card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if post.author.profile_pic %}
+                                            <img src="{{ url_for('static', filename=post.author.profile_pic) }}" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;" alt="Profile picture">
+                                        {% else %}
+                                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                <i class="bi bi-person-fill text-white"></i>
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <a href="{{ url_for('profile', username=post.author.username) }}" class="text-decoration-none">
+                                                <h6 class="card-subtitle mb-1">{{ post.author.username }}</h6>
+                                            </a>
+                                            <small class="text-muted">{{ post.timestamp.strftime('%d/%m/%Y %H:%M') }}</small>
+                                        </div>
+                                    </div>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+                                            <i class="bi bi-share"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <button class="dropdown-item share-button" data-type="copy" data-url="{{ url_for('view_post', post_id=post.id) }}">
+                                                    <i class="bi bi-link-45deg"></i> Copiar enlace
+                                                </button>
+                                            </li>
+                                            <li>
+                                                <button class="dropdown-item share-button" data-type="whatsapp" data-url="{{ url_for('view_post', post_id=post.id) }}">
+                                                    <i class="bi bi-whatsapp"></i> WhatsApp
+                                                </button>
+                                            </li>
+                                            <li>
+                                                <button class="dropdown-item share-button" data-type="twitter" data-url="{{ url_for('view_post', post_id=post.id) }}">
+                                                    <i class="bi bi-twitter"></i> Twitter
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <a href="{{ url_for('view_post', post_id=post.id) }}" class="text-decoration-none text-reset">
+                                    <p class="card-text">{{ post.content }}</p>
+                                    {% if post.image_path %}
+                                        <img src="{{ url_for('static', filename=post.image_path) }}" class="img-fluid rounded mb-3 post-image" alt="Post image">
+                                    {% endif %}
+                                </a>
+                                
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <form action="{{ url_for('like_post', post_id=post.id) }}" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-sm like-button {% if current_user.is_authenticated and post in current_user.likes|map(attribute='post') %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                                            <i class="bi bi-heart-fill"></i> {{ post.likes|length }}
+                                        </button>
+                                    </form>
+                                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#comments-{{ post.id }}">
+                                        <i class="bi bi-chat-dots"></i> {{ post.comments|length }} Comentarios
+                                    </button>
+                                </div>
+
+                                <div class="collapse" id="comments-{{ post.id }}">
+                                    <div class="card card-body bg-light mt-3">
+                                        <form action="{{ url_for('add_comment', post_id=post.id) }}" method="post" class="mb-3">
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" name="content" placeholder="Escribe un comentario..." required>
+                                                <button class="btn btn-primary" type="submit">
+                                                    <i class="bi bi-send"></i>
+                                                </button>
+                                            </div>
+                                        </form>
+                                        
+                                        {% for comment in post.comments %}
+                                            <div class="d-flex gap-2 mb-2">
+                                                <div class="flex-shrink-0">
+                                                    {% if comment.author.profile_pic %}
+                                                        <img src="{{ url_for('static', filename=comment.author.profile_pic) }}" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;" alt="Profile picture">
+                                                    {% else %}
+                                                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                                            <i class="bi bi-person-fill text-white"></i>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <div>
+                                                            <a href="{{ url_for('profile', username=comment.author.username) }}" class="fw-bold text-decoration-none">{{ comment.author.username }}</a>
+                                                            <small class="text-muted ms-2">{{ comment.timestamp.strftime('%d/%m/%Y %H:%M') }}</small>
+                                                        </div>
+                                                        {% if current_user == comment.author %}
+                                                            <form action="{{ url_for('delete_comment', comment_id=comment.id) }}" method="post" class="d-inline">
+                                                                <button type="submit" class="btn btn-link text-danger p-0" onclick="return confirm('¿Estás seguro de que quieres eliminar este comentario?')">
+                                                                    <i class="bi bi-trash"></i>
+                                                                </button>
+                                                            </form>
+                                                        {% endif %}
+                                                    </div>
+                                                    <p class="mb-0">{{ comment.content }}</p>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Miembros</h5>
+                    <div class="list-group list-group-flush">
+                        {% for member in group.members %}
+                            <div class="list-group-item d-flex align-items-center gap-2">
+                                {% if member.profile_pic %}
+                                    <img src="{{ url_for('static', filename=member.profile_pic) }}" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;" alt="Profile picture">
+                                {% else %}
+                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                        <i class="bi bi-person-fill text-white"></i>
+                                    </div>
+                                {% endif %}
+                                <a href="{{ url_for('profile', username=member.username) }}" class="text-decoration-none">
+                                    {{ member.username }}
+                                </a>
+                                {% if member == group.creator %}
+                                    <span class="badge bg-primary ms-auto">Creador</span>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.share-button').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const type = this.dataset.type;
+            const path = this.dataset.url;
+            const url = window.location.origin + path;
+            
+            switch(type) {
+                case 'copy':
+                    navigator.clipboard.writeText(url)
+                        .then(() => alert('¡Enlace copiado al portapapeles!'))
+                        .catch(err => console.error('Error al copiar: ', err));
+                    break;
+                case 'whatsapp':
+                    window.open('https://wa.me/?text=' + encodeURIComponent(url), '_blank');
+                    break;
+                case 'twitter':
+                    window.open('https://twitter.com/intent/tweet?url=' + encodeURIComponent(url), '_blank');
+                    break;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="container">
+        <h2 class="mb-4">Explorar Usuarios</h2>
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            {% for user in users %}
+                {% if user != current_user %}
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                {% if user.profile_pic %}
+                                    <img src="{{ url_for('static', filename=user.profile_pic) }}" class="rounded-circle mb-3" style="width: 100px; height: 100px; object-fit: cover;" alt="Profile picture">
+                                {% else %}
+                                    <div class="rounded-circle bg-secondary mb-3 mx-auto" style="width: 100px; height: 100px;">
+                                        <i class="bi bi-person-fill text-white" style="font-size: 3rem; line-height: 100px;"></i>
+                                    </div>
+                                {% endif %}
+                                <h5 class="card-title">{{ user.username }}</h5>
+                                <p class="card-text text-muted">{{ user.bio[:100] + '...' if user.bio|length > 100 else user.bio }}</p>
+                                <div class="d-flex justify-content-around mb-3">
+                                    <small class="text-muted">{{ user.followers.count() }} seguidores</small>
+                                    <small class="text-muted">{{ user.posts|length }} posts</small>
+                                </div>
+                                <a href="{{ url_for('profile', username=user.username) }}" class="btn btn-primary">Ver Perfil</a>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}
