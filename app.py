@@ -4,27 +4,45 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os
+import sys
+import logging
 from datetime import datetime
 
+# Configurar logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key')
+app.logger.info('Iniciando aplicación...')
 
-# Configuración de la base de datos
-if os.environ.get('DATABASE_URL'):
-    # Configuración para PostgreSQL en producción
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://')
-else:
-    # Configuración para SQLite en desarrollo
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///social.db'
-
+# Configuración básica
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-123')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', 'static/uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Configuración de la base de datos
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    # Configuración para PostgreSQL en producción
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    app.logger.info('Usando PostgreSQL en producción')
+else:
+    # Configuración para SQLite en desarrollo
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///social.db'
+    app.logger.info('Usando SQLite en desarrollo')
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 # Asegurar que la carpeta de uploads exista
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
+    app.logger.info(f"Carpeta de uploads creada: {app.config['UPLOAD_FOLDER']}")
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
@@ -376,15 +394,23 @@ def create_group_post(group_id):
     
     return redirect(url_for('view_group', group_id=group_id))
 
-@app.errorhandler(404)
-def page_not_found(e):
-    return render_template('404.html'), 404
-
 @app.errorhandler(500)
-def internal_server_error(e):
+def internal_error(error):
+    app.logger.error(f'Error del servidor: {error}')
+    db.session.rollback()
     return render_template('500.html'), 500
+
+@app.errorhandler(404)
+def not_found_error(error):
+    app.logger.error(f'Página no encontrada: {error}')
+    return render_template('404.html'), 404
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()
+        try:
+            app.logger.info('Creando tablas de la base de datos...')
+            db.create_all()
+            app.logger.info('Tablas creadas exitosamente')
+        except Exception as e:
+            app.logger.error(f'Error al crear las tablas: {e}')
     app.run(debug=True)
